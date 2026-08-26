@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+  name: {{ include "backend.fullname" . }}
+
+  labels:
+    {{- include "backend.labels" . | nindent 4 }}
+
+spec:
+  replicas: {{ .Values.replicaCount }}
+
+  selector:
+    matchLabels:
+      {{- include "backend.selectorLabels" . | nindent 6 }}
+
+  template:
+
+    metadata:
+      labels:
+        {{- include "backend.selectorLabels" . | nindent 8 }}
+        azure.workload.identity/use: "true"
+
+    spec:
+
+      serviceAccountName: {{ .Values.global.workloadIdentity.serviceAccountName | default "backend-workload-identity" }}
+
+      containers:
+
+        - name: backend
+
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPort }}
+              protocol: TCP
+
+          env:
+
+            - name: DB_HOST
+              value: "{{ .Release.Name }}-postgres"
+
+            - name: DB_PORT
+              value: "5432"
+
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-database-secrets
+                  key: DB_NAME
+
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-database-secrets
+                  key: DB_USER
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-database-secrets
+                  key: DB_PASSWORD
+
+            - name: FRONTEND_ORIGIN
+              value: {{ .Values.frontendOrigin | quote }}
+
+          volumeMounts:
+
+            - name: secrets-store
+              mountPath: /mnt/secrets-store
+              readOnly: true
+
+      volumes:
+
+        - name: secrets-store
+
+          csi:
+            driver: secrets-store.csi.k8s.io
+
+            readOnly: true
+
+            volumeAttributes:
+              secretProviderClass: {{ .Release.Name }}-azure-keyvault

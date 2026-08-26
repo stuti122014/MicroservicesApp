@@ -1,0 +1,87 @@
+global:
+  workloadIdentity:
+    serviceAccountName: backend-workload-identity
+
+frontend:
+  replicaCount: 3
+
+  image:
+    repository: devnitoracr001.azurecr.io/frntndimage
+    tag: "v1.0.1"
+    pullPolicy: IfNotPresent
+
+  containerPort: 80
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+
+  ingress:
+    enabled: true
+    className: nginx
+    host: qa.6weathers.com
+    path: /
+
+  apiUrl: "http://qa.6weathers.com/api"
+
+backend:
+  replicaCount: 3
+
+  image:
+    repository: devnitoracr001.azurecr.io/backendimage
+    tag: "v1.0.1"
+    pullPolicy: IfNotPresent
+
+  containerPort: 8080
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+
+  frontendOrigin: "http://qa.6weathers.com"
+
+  ingress:
+    enabled: true
+    className: nginx
+    host: qa.6weathers.com
+    path: /api
+
+  migration:
+    enabled: true
+
+postgres:
+  replicaCount: 1
+
+  image:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 5432
+
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+
+azure:
+  workloadIdentity:
+    enabled: true
+
+    serviceAccountName: backend-workload-identity
+
+    clientId: "1360ed8f-a394-4c3b-9da0-0a8ddc5317bf"
+
+    tenantId: "03d9c571-f4cd-41f4-a17b-b7880f23e331"
+
+  keyVault:
+    name: "nitorkeyvalultdev"
+
+    secrets:
+      dbUsername: "DB-USERNAME"
+      dbPassword: "DB-PASSWORD"
+      dbName: "QA-DBNAME"

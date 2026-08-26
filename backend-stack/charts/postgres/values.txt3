@@ -1,0 +1,25 @@
+replicaCount: 1
+
+image:
+
+  repository: postgres
+
+  tag: "16-alpine"
+
+  pullPolicy: IfNotPresent
+
+
+service:
+
+  type: ClusterIP
+
+  port: 5432
+
+
+persistence:
+
+  enabled: true
+
+  size: 5Gi
+
+  storageClass: ""

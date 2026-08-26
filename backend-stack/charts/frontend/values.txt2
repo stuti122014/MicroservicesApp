@@ -1,0 +1,36 @@
+replicaCount: 1
+
+image:
+
+  repository: devnitoracr001.azurecr.io/frntndimage
+
+
+  tag: v1.0.1
+
+  pullPolicy: IfNotPresent
+
+
+containerPort: 80
+
+
+service:
+
+  type: ClusterIP
+
+  port: 80
+
+  targetPort: 80
+
+
+apiUrl: ""
+
+
+ingress:
+
+  enabled: false
+
+  className: nginx
+
+  host: ""
+
+  path: /
