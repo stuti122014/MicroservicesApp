@@ -95,6 +95,15 @@ jobs:
         run: |
           kubectl create namespace backend 
            
+      # -----------------------------
+      # Delete Previous Helm Release
+      # -----------------------------
+
+      # - name: Uninstall previous Helm release
+      #   run: |
+      #     helm uninstall ${{ env.HELM_RELEASE }} \
+      #       --namespace backend \
+      #       --wait || true
 
 
       # -----------------------------
