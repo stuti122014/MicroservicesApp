@@ -93,9 +93,8 @@ jobs:
 
       - name: Create namespace
         run: |
-          kubectl create namespace backend \
-            --dry-run=client \
-            -o yaml | kubectl apply -f -
+          kubectl create namespace backend 
+           
 
 
       # -----------------------------
