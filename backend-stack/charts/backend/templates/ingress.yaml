@@ -5,6 +5,8 @@ metadata:
   name: {{ include "backend.fullname" . }}
   labels:
     {{- include "backend.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"  
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
