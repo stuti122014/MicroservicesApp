@@ -1,0 +1,138 @@
+name: Deploy Microservices
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  HELM_RELEASE: fitcart
+  CHART_PATH: ./backend-stack
+
+jobs:
+
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    environment: ${{ inputs.environment }}
+
+    steps:
+
+      # -----------------------------
+      # Checkout repository
+      # -----------------------------
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+
+      # -----------------------------
+      # Azure Login
+      # -----------------------------
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+
+      # -----------------------------
+      # AKS Credentials
+      # -----------------------------
+
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group dev-nitor-rg-002 \
+            --name dev-nitor-cluster-01 \
+            --overwrite-existing
+
+      # -----------------------------
+      # Helm
+      # -----------------------------
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+
+      # -----------------------------
+      # Helm Dependencies
+      # -----------------------------
+
+      - name: Update Helm dependencies
+        working-directory: backend-stack
+        run: |
+          helm dependency update .
+
+
+      # -----------------------------
+      # Helm Lint
+      # -----------------------------
+
+      - name: Helm lint
+        working-directory: backend-stack
+        run: |
+          helm lint . -f values/${{ inputs.environment }}-values.yaml
+
+
+      # -----------------------------
+      # Create namespace
+      # -----------------------------
+
+      # - name: Create namespace
+      #   run: |
+      #     kubectl create namespace backend 
+           
+      # -----------------------------
+      # Delete Previous Helm Release
+      # -----------------------------
+
+      - name: Uninstall previous Helm release
+        run: |
+          helm uninstall ${{ env.HELM_RELEASE }} \
+            --namespace backend \
+            --wait || true
+
+
+      # -----------------------------
+      # Deploy
+      # -----------------------------
+
+      - name: Deploy Helm chart
+        working-directory: ${{ env.CHART_PATH }}
+        run: |
+          helm upgrade --install ${{ env.HELM_RELEASE }} . \
+            --namespace backend \
+            --create-namespace \
+            -f "values/${{ inputs.environment }}-values.yaml" \
+            --wait \
+            --timeout 10m
+
+
+      # -----------------------------
+      # Deployment status
+      # -----------------------------
+
+      - name: Check deployment
+        run: |
+
+          kubectl get pods \
+            -n backend
+
+          kubectl get svc \
+            -n backend
+
+          kubectl get ingress \
+            -n backend
