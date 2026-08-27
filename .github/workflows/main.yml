@@ -1,0 +1,135 @@
+name: Deploy Microservices
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  HELM_RELEASE: fitcart
+  CHART_PATH: ./backend-stack
+
+jobs:
+
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    environment: ${{ inputs.environment }}
+
+    steps:
+
+      # -----------------------------
+      # Checkout repository
+      # -----------------------------
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+
+      # -----------------------------
+      # Azure Login
+      # -----------------------------
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+
+      # -----------------------------
+      # AKS Credentials
+      # -----------------------------
+
+      - name: Get AKS credentials
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
+          cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
+
+
+      # -----------------------------
+      # Helm
+      # -----------------------------
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+
+      # -----------------------------
+      # Helm Dependencies
+      # -----------------------------
+
+      - name: Update Helm dependencies
+        working-directory: backend-stack
+        run: |
+          helm dependency update .
+
+
+      # -----------------------------
+      # Helm Lint
+      # -----------------------------
+
+      - name: Helm lint
+        working-directory: backend-stack
+        run: |
+          helm lint .
+
+
+      # -----------------------------
+      # Create namespace
+      # -----------------------------
+
+      - name: Create namespace
+        run: |
+          kubectl create namespace fitcart-${{ inputs.environment }} \
+            --dry-run=client \
+            -o yaml | kubectl apply -f -
+
+
+      # -----------------------------
+      # Deploy
+      # -----------------------------
+
+      - name: Deploy Helm chart
+        working-directory: backend-stack
+        run: |
+
+          helm upgrade --install ${{ env.HELM_RELEASE }} \
+            . \
+            --namespace fitcart-${{ inputs.environment }} \
+            --create-namespace \
+            -f values.yaml \
+            -f values/${{ inputs.environment }}.yaml \
+            --wait \
+            --timeout 10m
+
+
+      # -----------------------------
+      # Deployment status
+      # -----------------------------
+
+      - name: Check deployment
+        run: |
+
+          kubectl get pods \
+            -n fitcart-${{ inputs.environment }}
+
+          kubectl get svc \
+            -n fitcart-${{ inputs.environment }}
+
+          kubectl get ingress \
+            -n fitcart-${{ inputs.environment }}
