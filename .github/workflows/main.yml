@@ -45,21 +45,19 @@ jobs:
       - name: Azure Login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
 
       # -----------------------------
       # AKS Credentials
       # -----------------------------
 
-      - name: Get AKS credentials
-        uses: azure/aks-set-context@v4
-        with:
-          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
-          cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
-
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group dev-nitor-rg-002 \
+            --name dev-nitor-cluster-01 \
+            --overwrite-existing
 
       # -----------------------------
       # Helm
@@ -95,7 +93,7 @@ jobs:
 
       - name: Create namespace
         run: |
-          kubectl create namespace fitcart-${{ inputs.environment }} \
+          kubectl create namespace ${{ inputs.environment }} \
             --dry-run=client \
             -o yaml | kubectl apply -f -
 
