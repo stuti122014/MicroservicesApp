@@ -84,7 +84,7 @@ jobs:
       - name: Helm lint
         working-directory: backend-stack
         run: |
-          helm lint . -f values/${{ inputs.environment }}.yaml
+          helm lint . -f backend-stack/values/${{ inputs.environment }}.yaml
 
 
       # -----------------------------
@@ -103,15 +103,12 @@ jobs:
       # -----------------------------
 
       - name: Deploy Helm chart
-        working-directory: backend-stack
+        working-directory: ${{ env.CHART_PATH }}
         run: |
-
-          helm upgrade --install ${{ env.HELM_RELEASE }} \
-            . \
+          helm upgrade --install ${{ env.HELM_RELEASE }} . \
             --namespace backend \
             --create-namespace \
-            -f values.yaml \
-            -f values/${{ inputs.environment }}.yaml \
+            -f "values/${{ inputs.environment }}-values.yaml" \
             --wait \
             --timeout 10m
 
