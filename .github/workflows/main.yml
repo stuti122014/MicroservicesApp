@@ -84,7 +84,7 @@ jobs:
       - name: Helm lint
         working-directory: backend-stack
         run: |
-          helm lint .
+          helm lint . -f values/${{ inputs.environment }}.yaml
 
 
       # -----------------------------
