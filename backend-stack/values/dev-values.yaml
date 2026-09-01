@@ -3,7 +3,7 @@ global:
     serviceAccountName: backend-workload-identity
 
 frontend:
-  replicaCount: 0
+  replicaCount: 1
 
   image:
     repository: devnitoracr001.azurecr.io/frntndimage
