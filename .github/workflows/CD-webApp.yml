@@ -82,11 +82,11 @@ jobs:
       # -----------------------------
       # Uninstall Previous Release
       # -----------------------------
-      - name: Uninstall previous Helm release
-        run: |
-          helm uninstall $HELM_RELEASE \
-            --namespace $NAMESPACE \
-            --wait || true
+      # - name: Uninstall previous Helm release
+      #   run: |
+      #     helm uninstall $HELM_RELEASE \
+      #       --namespace $NAMESPACE \
+      #       --wait || true
 
       # -----------------------------
       # Deploy Application
