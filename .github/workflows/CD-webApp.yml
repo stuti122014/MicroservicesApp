@@ -135,4 +135,4 @@ jobs:
 
           kubectl get ingress \
             -n ${{ env.K8S_NAMESPACE }}
-```
+
