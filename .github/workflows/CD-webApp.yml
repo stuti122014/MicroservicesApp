@@ -1,5 +1,4 @@
 name: Deploy Microservices
-
 on:
   workflow_dispatch:
     inputs:
