@@ -1,4 +1,4 @@
-name: Deploy ENV Based Microservices
+name: Deploy Microservices
 
 on:
   workflow_dispatch:
@@ -17,6 +17,7 @@ permissions:
   contents: read
 
 env:
+  HELM_RELEASE: backend-stack
   CHART_PATH: ./backend-stack
 
 jobs:
@@ -41,11 +42,10 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # -----------------------------
-      # Set Environment Variables
+      # Set Namespace
       # -----------------------------
-      - name: Set Deployment Variables
+      - name: Set Namespace
         run: |
-          echo "HELM_RELEASE=backend-stack-${{ inputs.environment }}" >> $GITHUB_ENV
           echo "NAMESPACE=backend-${{ inputs.environment }}" >> $GITHUB_ENV
 
       # -----------------------------
@@ -59,7 +59,7 @@ jobs:
             --overwrite-existing
 
       # -----------------------------
-      # Helm
+      # Setup Helm
       # -----------------------------
       - name: Setup Helm
         uses: azure/setup-helm@v4
@@ -78,11 +78,10 @@ jobs:
       - name: Helm lint
         working-directory: backend-stack
         run: |
-          helm lint . \
-            -f values/${{ inputs.environment }}-values.yaml
+          helm lint . -f values/${{ inputs.environment }}-values.yaml
 
       # -----------------------------
-      # Delete Previous Helm Release
+      # Uninstall Previous Release
       # -----------------------------
       - name: Uninstall previous Helm release
         run: |
@@ -91,7 +90,7 @@ jobs:
             --wait || true
 
       # -----------------------------
-      # Deploy
+      # Deploy Application
       # -----------------------------
       - name: Deploy Helm chart
         working-directory: ${{ env.CHART_PATH }}
