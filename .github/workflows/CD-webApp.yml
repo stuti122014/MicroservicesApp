@@ -1,5 +1,4 @@
-
-name: Deploy Microservices
+name: Deploy ENV Based Microservices
 
 on:
   workflow_dispatch:
@@ -18,42 +17,40 @@ permissions:
   contents: read
 
 env:
-  HELM_RELEASE: backend-stack
   CHART_PATH: ./backend-stack
-  K8S_NAMESPACE: backend-${{ inputs.environment }}
 
 jobs:
-
   deploy:
-
     runs-on: ubuntu-latest
 
     environment: ${{ inputs.environment }}
 
     steps:
-
       # -----------------------------
       # Checkout repository
       # -----------------------------
-
       - name: Checkout code
         uses: actions/checkout@v4
-
 
       # -----------------------------
       # Azure Login
       # -----------------------------
-
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # -----------------------------
+      # Set Environment Variables
+      # -----------------------------
+      - name: Set Deployment Variables
+        run: |
+          echo "HELM_RELEASE=backend-stack-${{ inputs.environment }}" >> $GITHUB_ENV
+          echo "NAMESPACE=backend-${{ inputs.environment }}" >> $GITHUB_ENV
 
       # -----------------------------
       # AKS Credentials
       # -----------------------------
-
       - name: Get AKS Credentials
         run: |
           az aks get-credentials \
@@ -61,88 +58,59 @@ jobs:
             --name dev-nitor-cluster-01 \
             --overwrite-existing
 
-
       # -----------------------------
-      # Setup Helm
+      # Helm
       # -----------------------------
-
       - name: Setup Helm
         uses: azure/setup-helm@v4
-
 
       # -----------------------------
       # Helm Dependencies
       # -----------------------------
-
       - name: Update Helm dependencies
-        working-directory: ${{ env.CHART_PATH }}
+        working-directory: backend-stack
         run: |
           helm dependency update .
-
 
       # -----------------------------
       # Helm Lint
       # -----------------------------
-
       - name: Helm lint
-        working-directory: ${{ env.CHART_PATH }}
+        working-directory: backend-stack
         run: |
           helm lint . \
-            -f "values/${{ inputs.environment }}-values.yaml"
-
+            -f values/${{ inputs.environment }}-values.yaml
 
       # -----------------------------
-      # Create Namespace
-      # -----------------------------
-
-      - name: Create namespace
-        run: |
-          kubectl create namespace ${{ env.K8S_NAMESPACE }} \
-            --dry-run=client \
-            -o yaml | kubectl apply -f -
-
-     # -----------------------------
       # Delete Previous Helm Release
       # -----------------------------
-
       - name: Uninstall previous Helm release
         run: |
-          helm uninstall ${{ env.HELM_RELEASE }} \
-            --namespace backend \
+          helm uninstall $HELM_RELEASE \
+            --namespace $NAMESPACE \
             --wait || true
-
 
       # -----------------------------
       # Deploy
       # -----------------------------
-
       - name: Deploy Helm chart
         working-directory: ${{ env.CHART_PATH }}
         run: |
-          helm upgrade --install ${{ env.HELM_RELEASE }} . \
-            --namespace ${{ env.K8S_NAMESPACE }} \
+          helm upgrade --install $HELM_RELEASE . \
+            --namespace $NAMESPACE \
             --create-namespace \
-            -f "values/${{ inputs.environment }}-values.yaml" \
+            -f values/${{ inputs.environment }}-values.yaml \
             --wait \
             --timeout 10m
 
-
       # -----------------------------
-      # Deployment status
+      # Deployment Status
       # -----------------------------
-
       - name: Check deployment
         run: |
+          echo "Namespace: $NAMESPACE"
+          echo "Release: $HELM_RELEASE"
 
-          echo "Environment: ${{ inputs.environment }}"
-          echo "Namespace: ${{ env.K8S_NAMESPACE }}"
-
-          kubectl get pods \
-            -n ${{ env.K8S_NAMESPACE }}
-
-          kubectl get svc \
-            -n ${{ env.K8S_NAMESPACE }}
-
-          kubectl get ingress \
-            -n ${{ env.K8S_NAMESPACE }}
-
+          kubectl get pods -n $NAMESPACE
+          kubectl get svc -n $NAMESPACE
+          kubectl get ingress -n $NAMESPACE
