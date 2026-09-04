@@ -101,6 +101,16 @@ jobs:
             --dry-run=client \
             -o yaml | kubectl apply -f -
 
+     # -----------------------------
+      # Delete Previous Helm Release
+      # -----------------------------
+
+      - name: Uninstall previous Helm release
+        run: |
+          helm uninstall ${{ env.HELM_RELEASE }} \
+            --namespace backend \
+            --wait || true
+
 
       # -----------------------------
       # Deploy
